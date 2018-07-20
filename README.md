@@ -29,7 +29,7 @@ Commands:
 ./balancer-cli.sh --host localhost --port 80 disable bal1 http://worker1:8080
 
 ## set the worker http://worker1:8080 in balancer bal1 to drain mode
-./balancer-cli.sh --host localhost --port 80 disable bal1 http://worker1:8080
+./balancer-cli.sh --host localhost --port 80 drain bal1 http://worker1:8080
 
 # Defaults
 Script looks in current directory and then in user's home directory for file ```.balancer-cli``` which can specify the hostname, port. One can use the template with default values, uncomment and copy into the user home directory.
