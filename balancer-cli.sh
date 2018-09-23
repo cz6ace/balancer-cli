@@ -103,7 +103,13 @@ configureworker() {
   esac
   echo configuring $worker @ $balancer with action $action
   # echo statusd=$statusd statusn=$statusn
-  wget "${url}?lf=${lf}&ls=${ls}&wr=&rr=&status_I=${statusi}&status_D=${statusd}&status_H=${statush}&status_N=${statusn}&w=${worker}&b=${balancer}&nonce=${nonce}" -O - 1>/dev/null 2>&1
+  # if variables are empty, do not pass them,
+  #- otherwise the values will be rewritten by default values and old settings will be lost
+  if [ -n "$lf" ]; then uloadfactor="lf=${lf}&"; fi
+  if [ -n "$ls" ]; then uloadset="ls=${ls}&"; fi
+  if [ -n "$wr" ]; then uroute="wr=${wr}&"; fi
+  if [ -n "$rr" ]; then uredirect="rr=${rr}&"; fi
+  wget "${url}?${uloadfactor}${uloadset}${uroute}${uredirect}&status_I=${statusi}&status_D=${statusd}&status_H=${statush}&status_N=${statusn}&w=${worker}&b=${balancer}&nonce=${nonce}" -O - 1>/dev/null 2>&1
 }
 
 if [ $# -eq 0 ]; then
