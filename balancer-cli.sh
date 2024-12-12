@@ -8,7 +8,7 @@ path=balancer-manager
 url=
 
 # nonce - will be populated automatically
-nonce=
+declare -A nonce
 # load factor
 lf=
 # load balance set
@@ -25,6 +25,8 @@ statusd=
 statush=
 # status drain
 statusn=
+# if defined, debug messages can be emited
+#DEBUG=1
 
 #
 # Print usage
@@ -66,14 +68,14 @@ readdefaults() {
 #
 balancers() {
   verbose=$1
-  balancers=$(cat $tmpfile | grep "Status for balancer:" | sed -e "s|.*balancer://||;s|</h3>||")
+  balancers=$(cat $tmpfile | grep "LoadBalancer Status for" | sed -e "s|.*balancer://||;s|</a>.*</h3>||")
   [ 1 -eq "$1" ] && echo balancers: $balancers
   for b in $balancers; do
     [ 1 -eq "$1" ] && echo reading balancer $b
-    workers=$(cat $tmpfile | grep -e "b=$b" | sed -e "s/\(.*w=\)\([^\&\"]*\)\(.*\)/\2/")
-    nonce=$(cat $tmpfile | grep nonce | sed -e "s/\(.*nonce=\)\([0-9a-zA-Z\-]\+\)\(.*\)/\2/" | head -n 1)
+    workers=$(cat $tmpfile | grep -e "b=$b" | grep -v "LoadBalancer Status" | sed -e "s/\(.*w=\)\([^\&\"]*\)\(.*\)/\2/")
+    nonce[$b]=$(cat $tmpfile | grep -e "b=$b" | grep nonce | sed -e "s/\(.*nonce=\)\([0-9a-zA-Z\-]\+\)\(.*\)/\2/" | head -n 1)
     [ 1 -eq "$1" ] && echo workers: $workers
-    # echo nonce  : $nonce
+    [ 1 -eq "$1" ] && echo nonce  : ${nonce[$b]}
   done
 }
 
@@ -109,7 +111,7 @@ configureworker() {
   if [ -n "$ls" ]; then uloadset="ls=${ls}&"; fi
   if [ -n "$wr" ]; then uroute="wr=${wr}&"; fi
   if [ -n "$rr" ]; then uredirect="rr=${rr}&"; fi
-  wget "${url}?${uloadfactor}${uloadset}${uroute}${uredirect}&status_I=${statusi}&status_D=${statusd}&status_H=${statush}&status_N=${statusn}&w=${worker}&b=${balancer}&nonce=${nonce}" -O - 1>/dev/null 2>&1
+  wget "${url}" --post-data "${uloadfactor}${uloadset}${uroute}${uredirect}w_status_I=${statusi}&w_status_D=${statusd}&w_status_H=${statush}&w_status_N=${statusn}&w=${worker}&b=${balancer}&nonce=${nonce[$balancer]}" -O - 1>/dev/null 2>&1
 }
 
 if [ $# -eq 0 ]; then
@@ -136,6 +138,7 @@ while (( $# > 0 )); do
       ;;
     "-h" | "--help")
       help
+      shift
       ;;
     *)
       break
@@ -145,6 +148,7 @@ done
 
 # first read initial page with balancers, workers and also nonce
 url=${protocol}://${host}:${port}/${path}
+[ -n "$DEBUG" ] && echo wget $url -O $tmpfile
 wget $url -O $tmpfile 2>/dev/null
 trap "rm $tmpfile" EXIT
 
